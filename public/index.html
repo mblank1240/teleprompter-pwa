@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Teleprompter</title>
+  <meta name="description" content="A teleprompter for iPad with a rich text editor and a mirrored, touch-controllable prompter.">
+  <meta name="theme-color" content="#f7f7f5" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#111214" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Prompter">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" type="image/png" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <!-- ============ EDITOR ============ -->
+  <div id="editor-view" class="view">
+    <header class="topbar">
+      <button class="icon-btn" id="btn-library" title="Scripts" aria-label="Scripts">
+        <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h10"/></svg>
+      </button>
+      <input id="script-title" class="title-input" type="text" placeholder="Untitled script" aria-label="Script title" autocomplete="off" spellcheck="false">
+      <span id="save-status" class="save-status" aria-live="polite"></span>
+      <div class="topbar-actions">
+        <button class="icon-btn" id="btn-file" title="File" aria-label="File menu" aria-haspopup="menu">
+          <svg viewBox="0 0 24 24"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/></svg>
+        </button>
+        <button class="icon-btn" id="btn-theme" title="Theme" aria-label="Toggle theme">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 1 0 16z" class="fill"/></svg>
+        </button>
+        <button class="primary-btn" id="btn-start" title="Start prompter (Ctrl+Enter)">
+          <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z" class="fill"/></svg>
+          <span>Prompt</span>
+        </button>
+      </div>
+    </header>
+
+    <div class="toolbar" id="toolbar" role="toolbar" aria-label="Formatting">
+      <div class="tool-group">
+        <button class="tool" data-cmd="undo" title="Undo" aria-label="Undo"><svg viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10a6 6 0 0 1 0 12h-3"/></svg></button>
+        <button class="tool" data-cmd="redo" title="Redo" aria-label="Redo"><svg viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H10a6 6 0 0 0 0 12h3"/></svg></button>
+      </div>
+      <div class="tool-group">
+        <button class="tool txt" data-cmd="bold" title="Bold" aria-label="Bold"><b>B</b></button>
+        <button class="tool txt" data-cmd="italic" title="Italic" aria-label="Italic"><i>I</i></button>
+        <button class="tool txt" data-cmd="underline" title="Underline" aria-label="Underline"><u>U</u></button>
+        <button class="tool txt" data-cmd="strikeThrough" title="Strikethrough" aria-label="Strikethrough"><s>S</s></button>
+      </div>
+      <div class="tool-group">
+        <button class="tool swatch-btn" id="btn-color" title="Text color" aria-label="Text color" aria-haspopup="true">
+          <span class="glyph">A</span><span class="bar" id="color-bar"></span>
+        </button>
+        <button class="tool swatch-btn" id="btn-highlight" title="Highlight" aria-label="Highlight" aria-haspopup="true">
+          <svg viewBox="0 0 24 24"><path d="m9 11-6 6v3h9l3-3"/><path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4"/></svg>
+          <span class="bar" id="highlight-bar"></span>
+        </button>
+        <button class="tool" data-cmd="removeFormat" title="Clear formatting" aria-label="Clear formatting">
+          <svg viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4l-3 16"/><path d="m15 15 6 6m0-6-6 6"/></svg>
+        </button>
+      </div>
+      <div class="tool-group">
+        <button class="tool" data-cmd="justifyLeft" title="Align left" aria-label="Align left"><svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h14"/></svg></button>
+        <button class="tool" data-cmd="justifyCenter" title="Align center" aria-label="Align center"><svg viewBox="0 0 24 24"><path d="M4 6h16M7 12h10M5 18h14"/></svg></button>
+      </div>
+      <div class="tool-group">
+        <label class="select-wrap" title="Font">
+          <span class="sr-only">Font</span>
+          <select id="font-family"></select>
+        </label>
+        <div class="stepper" title="Editor text size">
+          <button class="tool" id="font-down" aria-label="Smaller text"><span class="small-a">A</span></button>
+          <span id="font-size-label" class="stepper-label">22</span>
+          <button class="tool" id="font-up" aria-label="Larger text"><span class="big-a">A</span></button>
+        </div>
+      </div>
+      <div class="tool-group">
+        <label class="select-wrap" title="Line spacing">
+          <svg viewBox="0 0 24 24" class="inline-ico"><path d="M10 6h10M10 12h10M10 18h10M4 8l2-3 2 3M4 16l2 3 2-3"/></svg>
+          <select id="line-height" aria-label="Line spacing"></select>
+        </label>
+        <label class="select-wrap" title="Letter spacing">
+          <svg viewBox="0 0 24 24" class="inline-ico"><path d="M5 16 9 6l4 10M6.5 12.5h5M15 20h6m-6 0 2-2m-2 2 2 2"/></svg>
+          <select id="letter-spacing" aria-label="Letter spacing"></select>
+        </label>
+      </div>
+    </div>
+
+    <main class="editor-wrap" id="editor-wrap">
+      <div id="editor" class="script-text" contenteditable="true" spellcheck="true" aria-label="Script text" role="textbox" aria-multiline="true"></div>
+    </main>
+    <footer class="statusbar">
+      <span id="word-count">0 words</span>
+      <span id="read-time"></span>
+    </footer>
+  </div>
+
+  <!-- Color popovers -->
+  <div class="popover" id="pop-color" hidden role="dialog" aria-label="Text color">
+    <div class="swatches" data-kind="color"></div>
+    <div class="pop-row">
+      <label class="custom-color">Custom <input type="color" id="custom-color" value="#e11d48"></label>
+      <button class="link-btn" data-reset="color">Default</button>
+    </div>
+  </div>
+  <div class="popover" id="pop-highlight" hidden role="dialog" aria-label="Highlight color">
+    <div class="swatches" data-kind="highlight"></div>
+    <div class="pop-row">
+      <label class="custom-color">Custom <input type="color" id="custom-highlight" value="#fde047"></label>
+      <button class="link-btn" data-reset="highlight">None</button>
+    </div>
+  </div>
+
+  <!-- File menu -->
+  <div class="popover menu" id="pop-file" hidden role="menu">
+    <button role="menuitem" data-action="new">New script</button>
+    <button role="menuitem" data-action="import">Import file…</button>
+    <hr>
+    <button role="menuitem" data-action="export-txt">Export as text (.txt)</button>
+    <button role="menuitem" data-action="export-html">Export with formatting (.html)</button>
+    <hr>
+    <button role="menuitem" data-action="duplicate">Duplicate script</button>
+    <button role="menuitem" data-action="delete" class="danger">Delete script</button>
+  </div>
+  <input type="file" id="file-input" accept=".txt,.text,.md,.markdown,.html,.htm,text/plain,text/html,text/markdown" hidden>
+
+  <!-- Library drawer -->
+  <div class="scrim" id="scrim" hidden></div>
+  <aside class="drawer" id="library" hidden aria-label="Scripts">
+    <div class="drawer-head">
+      <h2>Scripts</h2>
+      <button class="primary-btn small" id="btn-new">New</button>
+    </div>
+    <ul id="script-list" class="script-list"></ul>
+  </aside>
+
+  <!-- ============ PROMPTER ============ -->
+  <div id="prompter-view" class="view prompter" tabindex="-1" hidden>
+    <div class="stage" id="stage">
+      <div class="mirror" id="mirror">
+        <div class="track script-text" id="track"></div>
+        <div class="marker" id="marker" aria-hidden="true"><span class="arrow left"></span><span class="arrow right"></span></div>
+        <div class="countdown" id="countdown" hidden></div>
+      </div>
+    </div>
+    <div class="progress" aria-hidden="true"><div class="progress-fill" id="progress"></div></div>
+
+    <div class="pcontrols" id="pcontrols">
+      <div class="prow">
+        <button class="pbtn" id="p-exit" title="Exit (Esc)" aria-label="Exit prompter">
+          <svg viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></svg><span>Edit</span>
+        </button>
+        <button class="pbtn" id="p-top" title="Back to start (Home)" aria-label="Back to start">
+          <svg viewBox="0 0 24 24"><path d="M6 5v14M18 6l-8 6 8 6z"/></svg>
+        </button>
+        <button class="pbtn play" id="p-play" title="Play / pause (Space)" aria-label="Play">
+          <svg viewBox="0 0 24 24" class="ico-play"><path d="M8 5v14l11-7z" class="fill"/></svg>
+          <svg viewBox="0 0 24 24" class="ico-pause"><path d="M8 5h3v14H8zM13 5h3v14h-3z" class="fill"/></svg>
+        </button>
+        <div class="pgroup grow">
+          <label for="p-speed" class="plabel">Speed</label>
+          <input type="range" id="p-speed" min="0" max="100" step="1" value="30">
+          <output id="p-speed-out" class="pvalue">30%</output>
+        </div>
+        <div class="pgroup">
+          <span class="plabel">Size</span>
+          <button class="pbtn sm" id="p-size-down" aria-label="Smaller text">−</button>
+          <output id="p-size-out" class="pvalue">64</output>
+          <button class="pbtn sm" id="p-size-up" aria-label="Larger text">+</button>
+        </div>
+      </div>
+      <div class="prow secondary">
+        <button class="pchip" id="p-mirror-x" aria-pressed="false" title="Mirror horizontally (M)">
+          <svg viewBox="0 0 24 24"><path d="M12 3v18M9 7 4 12l5 5zM15 7l5 5-5 5z"/></svg>Mirror
+        </button>
+        <button class="pchip" id="p-mirror-y" aria-pressed="false" title="Flip vertically (F)">
+          <svg viewBox="0 0 24 24"><path d="M3 12h18M7 9l5-5 5 5zM7 15l5 5 5-5z"/></svg>Flip
+        </button>
+        <button class="pchip" id="p-direction" title="Scroll direction (R)">
+          <svg viewBox="0 0 24 24" class="dir-ico"><path d="M12 19V5M6 11l6-6 6 6"/></svg><span id="p-direction-label">Scroll up</span>
+        </button>
+        <label class="pchip select">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="13" r="8"/><path d="M12 9v4l2 2M10 2h4"/></svg>
+          <span class="sr-only">Start delay</span>
+          <select id="p-delay" aria-label="Start delay"></select>
+        </label>
+        <button class="pchip" id="p-marker" aria-pressed="true" title="Reading marker">
+          <svg viewBox="0 0 24 24"><path d="M4 8v8l5-4zM20 8v8l-5-4z" class="fill"/></svg>Marker
+        </button>
+        <label class="pchip select">
+          <svg viewBox="0 0 24 24"><path d="M4 4v16M20 4v16M8 12h8"/></svg>
+          <span class="sr-only">Margins</span>
+          <select id="p-margin" aria-label="Side margins"></select>
+        </label>
+      </div>
+    </div>
+    <div class="phint" id="phint">Tap to show controls · Drag to scrub</div>
+  </div>
+
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
