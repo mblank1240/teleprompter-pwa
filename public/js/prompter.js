@@ -3,8 +3,13 @@
 // The scroll position `pos` is the number of pixels the text has moved past the
 // reading marker. 0 = first line on the marker, max = last line on the marker.
 
-const MAX_LINES_PER_SEC = 3;     // speed at 100%
+// Speed runs 0..SPEED_MAX. The curve is defined over 0..100 (100 = MAX_LINES_PER_SEC)
+// and capped at SPEED_MAX, since the top half of that range was never useful.
+const SPEED_MAX = 50;
+const MAX_LINES_PER_SEC = 3;
 const SPEED_CURVE = 1.5;         // >1 gives finer control at the slow end
+const HOLD_DELAY_MS = 400;       // press-and-hold on − / + starts repeating after this
+const HOLD_REPEAT_MS = 90;
 const TAP_SLOP = 10;             // px a touch may move and still count as a tap
 const HIDE_CONTROLS_MS = 3000;
 const FONT_MIN = 24;
@@ -31,16 +36,16 @@ export class Prompter {
       controls: $('pcontrols'),
       hint: $('phint'),
       play: $('p-play'),
-      speed: $('p-speed'),
       speedOut: $('p-speed-out'),
       sizeOut: $('p-size-out'),
       mirrorX: $('p-mirror-x'),
       mirrorY: $('p-mirror-y'),
       direction: $('p-direction'),
-      directionLabel: $('p-direction-label'),
       delay: $('p-delay'),
+      delayOut: $('p-delay-out'),
       markerBtn: $('p-marker'),
       margin: $('p-margin'),
+      marginOut: $('p-margin-out'),
     };
 
     this.s = null;           // prompter settings (shared object, persisted via onChange)
@@ -56,7 +61,6 @@ export class Prompter {
     this.wakeLock = null;
 
     this.frame = this.frame.bind(this);
-    this.buildOptions();
     this.bindControls();
     this.bindStage();
     this.bindKeys();
@@ -74,6 +78,7 @@ export class Prompter {
 
   open(html, settings) {
     this.s = settings;
+    if (this.s.speed > SPEED_MAX) this.s.speed = SPEED_MAX; // saved before the range was capped
     this.el.track.innerHTML = html;
     this.el.view.hidden = false;
     this.isOpen = true;
@@ -223,7 +228,7 @@ export class Prompter {
   }
 
   setSpeed(v) {
-    this.set('speed', Math.round(Math.min(100, Math.max(0, v))));
+    this.set('speed', Math.round(Math.min(SPEED_MAX, Math.max(0, v))));
   }
 
   setFontSize(px) {
@@ -239,24 +244,24 @@ export class Prompter {
 
   syncUi() {
     const { s, el } = this;
-    el.speed.value = s.speed;
-    el.speedOut.textContent = s.speed + '%';
+    el.speedOut.textContent = s.speed;
     el.sizeOut.textContent = s.fontSize;
     el.mirrorX.setAttribute('aria-pressed', s.mirrorX);
     el.mirrorY.setAttribute('aria-pressed', s.mirrorY);
     el.direction.classList.toggle('reverse', s.reverse);
-    el.directionLabel.textContent = s.reverse ? 'Scroll down' : 'Scroll up';
-    el.delay.value = s.delay;
+    el.direction.setAttribute('aria-label', `Scroll direction: ${s.reverse ? 'down' : 'up'}`);
+    el.delayOut.textContent = s.delay ? s.delay + 's' : 'Off';
+    el.delay.setAttribute('aria-label', `Start delay: ${s.delay ? s.delay + ' seconds' : 'off'}`);
     el.markerBtn.setAttribute('aria-pressed', s.marker);
     el.view.classList.toggle('no-marker', !s.marker);
-    el.margin.value = s.margin;
+    el.marginOut.textContent = s.margin + '%';
+    el.margin.setAttribute('aria-label', `Side margins: ${s.margin}%`);
   }
 
-  buildOptions() {
-    this.el.delay.innerHTML = DELAY_OPTIONS
-      .map(d => `<option value="${d}">${d === 0 ? 'No delay' : d + 's delay'}</option>`).join('');
-    this.el.margin.innerHTML = MARGIN_OPTIONS
-      .map(m => `<option value="${m}">${m === 0 ? 'No margin' : m + '% margin'}</option>`).join('');
+  // Next value in a list of options, wrapping around.
+  cycle(options, value) {
+    const i = options.indexOf(value);
+    return options[(i + 1) % options.length];
   }
 
   bindControls() {
@@ -271,19 +276,44 @@ export class Prompter {
     onClick($('p-exit'), () => this.close());
     onClick($('p-top'), () => this.toStart());
     onClick(el.play, () => this.toggle());
-    onClick($('p-size-down'), () => this.setFontSize(this.s.fontSize - FONT_STEP));
-    onClick($('p-size-up'), () => this.setFontSize(this.s.fontSize + FONT_STEP));
     onClick(el.mirrorX, () => { this.set('mirrorX', !this.s.mirrorX); this.applyMirror(); });
     onClick(el.mirrorY, () => { this.set('mirrorY', !this.s.mirrorY); this.applyMirror(); });
     onClick(el.direction, () => this.set('reverse', !this.s.reverse));
     onClick(el.markerBtn, () => this.set('marker', !this.s.marker));
 
-    el.speed.addEventListener('input', () => { this.setSpeed(+el.speed.value); this.scheduleHide(); });
-    el.delay.addEventListener('change', () => this.set('delay', +el.delay.value));
-    el.margin.addEventListener('change', () => { this.set('margin', +el.margin.value); this.relayout(); });
+    onClick(el.delay, () => this.set('delay', this.cycle(DELAY_OPTIONS, this.s.delay)));
+    onClick(el.margin, () => { this.set('margin', this.cycle(MARGIN_OPTIONS, this.s.margin)); this.relayout(); });
+
+    this.holdToRepeat($('p-speed-down'), () => this.setSpeed(this.s.speed - 1));
+    this.holdToRepeat($('p-speed-up'), () => this.setSpeed(this.s.speed + 1));
+    this.holdToRepeat($('p-size-down'), () => this.setFontSize(this.s.fontSize - FONT_STEP));
+    this.holdToRepeat($('p-size-up'), () => this.setFontSize(this.s.fontSize + FONT_STEP));
 
     // Any interaction with the control bar keeps it visible a bit longer.
     el.controls.addEventListener('pointerdown', () => this.showControls());
+  }
+
+  // Steps once on press, then repeats while held. Keyboard activation (a click
+  // with no pointer, detail === 0) steps once.
+  holdToRepeat(btn, step) {
+    let delay = 0;
+    let repeat = 0;
+    const stop = () => {
+      clearTimeout(delay);
+      clearInterval(repeat);
+      this.scheduleHide();
+    };
+    btn.addEventListener('pointerdown', e => {
+      if (e.button !== 0) return;
+      e.preventDefault();
+      step();
+      delay = setTimeout(() => { repeat = setInterval(step, HOLD_REPEAT_MS); }, HOLD_DELAY_MS);
+    });
+    for (const type of ['pointerup', 'pointerleave', 'pointercancel']) btn.addEventListener(type, stop);
+    btn.addEventListener('click', e => {
+      if (e.detail === 0) step();
+      this.el.view.focus({ preventScroll: true });
+    });
   }
 
   // ---------- touch: hold to pause, drag to scrub, tap to toggle controls ----------
@@ -335,15 +365,14 @@ export class Prompter {
   bindKeys() {
     document.addEventListener('keydown', e => {
       if (!this.isOpen) return;
-      if (e.target.closest && e.target.closest('select') && e.key !== 'Escape') return;
       const page = this.el.stage.clientHeight * 0.6;
       const handled = {
         ' ': () => this.toggle(),
         'Enter': () => this.toggle(),
         'k': () => this.toggle(),
         'Escape': () => this.close(),
-        'ArrowRight': () => this.setSpeed(this.s.speed + 5),
-        'ArrowLeft': () => this.setSpeed(this.s.speed - 5),
+        'ArrowRight': () => this.setSpeed(this.s.speed + 1),
+        'ArrowLeft': () => this.setSpeed(this.s.speed - 1),
         'ArrowDown': () => this.nudge(this.lineHeightPx),
         'ArrowUp': () => this.nudge(-this.lineHeightPx),
         'PageDown': () => this.nudge(page),
@@ -371,7 +400,6 @@ export class Prompter {
   }
 
   hideControls() {
-    if (document.activeElement && this.el.controls.contains(document.activeElement) && document.activeElement.tagName === 'SELECT') return;
     this.el.view.classList.add('controls-hidden');
   }
 

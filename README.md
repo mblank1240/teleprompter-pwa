@@ -67,14 +67,15 @@ storage cleanup for sites you only open in a browser tab.
 - `Ctrl/⌘ + Enter` starts the prompter
 
 **Prompter**
-- Speed 0–100% (finer control at the slow end)
-- Text size, side margins and reading marker settings, remembered between sessions
+- Minimal one-row control bar that hides itself while playing
+- Speed 0–50 with − / + (press and hold to step quickly; finer control at the slow end)
+- Text size − / +, side margins and reading marker, remembered between sessions
 - Mirror horizontally (beam-splitter glass), flip vertically, reverse scroll direction
 - Start delay with on-screen countdown (0–10 s)
 - **Touch and hold** pauses the text under your finger; **drag** to scrub; release and it continues
 - **Tap** to show or hide the controls (they auto-hide while playing)
 - Keeps the screen awake while prompting (iPadOS 16.4+)
-- Keyboard / Bluetooth remote: `Space`/`Enter` play/pause · `←/→` speed · `↑/↓` nudge a line ·
+- Keyboard / Bluetooth remote: `Space`/`Enter` play/pause · `←/→` speed ±1 · `↑/↓` nudge a line ·
   `PgUp/PgDn` jump · `Home` back to start · `+/-` size · `M` mirror · `F` flip · `R` direction · `Esc` exit
 
 ## Code layout
@@ -104,6 +105,6 @@ npx cap add ios && npx cap open ios
 ```
 
 For a fully native SwiftUI rewrite, `js/prompter.js` is the spec to port: position in px past
-the marker, speed curve `(speed/100)^1.5 × 3 lines/sec`, hold-to-pause / drag-to-scrub, and the
+the marker, speed curve `(speed/100)^1.5 × 3 lines/sec`, with speed capped at 50, hold-to-pause / drag-to-scrub, and the
 countdown. The script format is the simple HTML subset defined in `js/sanitize.js`, which maps
 directly onto `AttributedString`.
