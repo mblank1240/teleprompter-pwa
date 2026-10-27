@@ -4,37 +4,60 @@ A teleprompter PWA built for iPad: a rich-text script editor plus a full-screen 
 mirroring, adjustable speed, a start countdown and touch scrubbing. Plain HTML/CSS/JS, no build
 step and no dependencies.
 
-## Develop
+## Deploy your own copy
+
+The app is a static site with no server, database or accounts: each person's scripts are saved
+only in their own browser. Anyone can run their own copy for free. Vercel is the easiest host,
+and the steps below use it.
+
+### Option A: one click
+
+[![Deploy with Vercel](https://vercel.com/button)](https://vercel.com/new/clone?repository-url=https%3A%2F%2Fgithub.com%2Fmblank1240%2Fteleprompter-pwa&project-name=teleprompter&repository-name=teleprompter)
+
+1. Click the button and sign in to Vercel (signing in with GitHub is simplest).
+2. Vercel copies this repo into your own GitHub account and deploys it. No settings to change:
+   `vercel.json` already tells Vercel to serve the `public/` folder with no build step.
+3. You get an address like `https://teleprompter-yourname.vercel.app`.
+
+### Option B: fork, then import
+
+Use this if you want to follow updates to this repo, because a fork can sync with it.
+
+1. Click **Fork** at the top of this page on GitHub.
+2. Go to https://vercel.com/new, choose **Import** next to your fork, and click **Deploy**.
+   Leave every setting at its default.
+3. To pick up later changes from this repo, click **Sync fork** on your fork's GitHub page.
+   Vercel redeploys automatically.
+
+### Option C: command line
 
 ```sh
-npm start          # serves public/ on http://localhost:8080 and prints your LAN address
+git clone https://github.com/mblank1240/teleprompter-pwa.git
+cd teleprompter-pwa
+npm i -g vercel
+vercel login
+vercel deploy --prod      # accept the defaults; prints your live address
 ```
 
-Everything the browser loads lives in `public/`; edit those files and refresh.
+Run `vercel git connect` afterwards if you push the folder to your own GitHub repo and want
+every push to deploy automatically.
 
-To test on the iPad while you edit, the LAN address (e.g. `http://10.x.x.x:8080`) works,
-but Safari turns off offline mode and keep-screen-awake over plain `http`. For the full
-experience, give your local server a temporary HTTPS address:
+### After deploying
 
-```sh
-npx cloudflared tunnel --url http://localhost:8080   # prints a https://….trycloudflare.com link
-```
-
-## Deploy (Vercel)
-
-1. Push this folder to a GitHub repository.
-2. On https://vercel.com/new, import the repository. `vercel.json` already sets everything
-   (static site, serves `public/`, no build). Click **Deploy**.
-3. Every push to `main` goes live in seconds. Every other branch or pull request gets its
-   own preview URL, so you can try a change on the iPad without touching the installed app.
-
-Other static hosts work too. Set the publish/output directory to `public` and leave the
-build command empty (Netlify, Cloudflare Pages), or publish the `public/` folder as is.
-
-**Pick your permanent URL early.** The home-screen app and its saved scripts are tied to the
-site's address. Moving to a different domain later means starting with an empty library (use
-Export/Import to carry scripts over). A custom domain can be added in Vercel at any time and
-pointed at the same project.
+- **Choose your address before you rely on it.** Saved scripts belong to one web address. If
+  you change it later, the app starts with an empty library, so export your scripts first and
+  import them at the new address. To change the address, open the project on vercel.com, go to
+  **Settings → Domains**, and edit the `*.vercel.app` name or add your own domain.
+- **Updates:** with Options A and B, every push to your repo's `main` branch goes live within
+  seconds. Other branches get their own preview addresses, so you can try a change without
+  touching the installed app. Preview addresses ask for a Vercel login by default (change this
+  under **Settings → Deployment Protection**). Your main address is always public.
+- **Cost:** Vercel's free Hobby plan is plenty for this app. It is meant for personal,
+  non-commercial use; for wider use inside an organization, check Vercel's terms or use a
+  Pro plan.
+- **Other hosts** work too, since it's only static files. On Netlify or Cloudflare Pages, set the
+  publish/output directory to `public` and leave the build command empty. Anywhere else, upload
+  the contents of `public/`.
 
 ## Install on the iPad
 
@@ -53,6 +76,22 @@ storage cleanup for sites you only open in a browser tab.
   a clean re-download of every file.
 - If you add a new file to `public/`, also add it to `ASSETS` in `public/sw.js` (offline copy)
   and, if it's code, to `APP_FILES` in `public/js/app.js` (update check).
+
+## Develop
+
+```sh
+npm start          # serves public/ on http://localhost:8080 and prints your LAN address
+```
+
+Everything the browser loads lives in `public/`; edit those files and refresh.
+
+To test on the iPad while you edit, the LAN address (e.g. `http://10.x.x.x:8080`) works,
+but Safari turns off offline mode and keep-screen-awake over plain `http`. For the full
+experience, give your local server a temporary HTTPS address:
+
+```sh
+npx cloudflared tunnel --url http://localhost:8080   # prints a https://….trycloudflare.com link
+```
 
 ## Features
 
