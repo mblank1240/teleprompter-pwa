@@ -147,3 +147,7 @@ For a fully native SwiftUI rewrite, `js/prompter.js` is the spec to port: positi
 the marker, speed curve `(speed/100)^1.5 × 3 lines/sec`, with speed capped at 50, hold-to-pause / drag-to-scrub, and the
 countdown. The script format is the simple HTML subset defined in `js/sanitize.js`, which maps
 directly onto `AttributedString`.
+
+## License
+
+[MIT](LICENSE): free to use, copy, modify and share, including in your own projects.

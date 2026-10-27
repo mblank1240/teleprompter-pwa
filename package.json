@@ -7,5 +7,6 @@
   "scripts": {
     "start": "node tools/serve.mjs",
     "icons": "node tools/make-icons.mjs"
-  }
+  },
+  "license": "MIT"
 }
